@@ -3,13 +3,19 @@ unit Unit_Server;
 interface
 
 uses
-{$IF CompilerVersion < 18}
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, StdCtrls, ExtCtrls, ComCtrls, XPMan,
-{$ELSE}
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.XPMan,
-{$IFEND}IPC;
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls,
+  Vcl.ComCtrls,
+  IPC;
 
 type
   TForm1 = class(TForm)
@@ -25,35 +31,24 @@ type
     procedure Button3Click(Sender: TObject);
   private
     { Private declarations }
+    FIPCServer: TIPCServer;
   public
     { Public declarations }
-    procedure ServerRecieveIpcData(Sender: TObject; var ClientName: WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer);
+    procedure ServerRecieveIpcData(Sender: TObject; var ClientName: WideString;
+      var ClientWaitingForResponse: Boolean; var Data: Pointer);
   end;
 
 var
   Form1: TForm1;
-  IPCServer: TIPCServer;
 
 implementation
 
+uses
+  IPC.Demo.Types;
 {$R *.dfm}
 
-
-const
-  MAX_LENGTH = 1024;
-
-type
-  TData = packed record
-    ProcessId: DWORD;
-    Text: array [0 .. MAX_LENGTH] of WideChar;
-  end;
-
-type
-  TResponseData = packed record
-    Text: array [0 .. MAX_LENGTH] of WideChar;
-  end;
-
-procedure TForm1.ServerRecieveIpcData(Sender: TObject; var ClientName: WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer);
+procedure TForm1.ServerRecieveIpcData(Sender: TObject; var ClientName:
+  WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer);
 var
   ResponseData: TResponseData;
 begin
@@ -61,15 +56,15 @@ begin
   if ClientWaitingForResponse then
   begin
     lstrcpynW(ResponseData.Text, PWideChar(Edit1.Text), MAX_LENGTH);
-    if not IPCServer.SendIpcData(ClientName, @ResponseData, SizeOf(TResponseData)) then
-      Form1.Memo1.Lines.Add('Error send response - ' + SysErrorMessage(IPCServer.LastError));
+    if not FIPCServer.SendIpcData(ClientName, @ResponseData, SizeOf(TResponseData)) then
+      Form1.Memo1.Lines.Add('Error send response - ' + SysErrorMessage(FIPCServer.LastError));
   end;
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
 begin
-  if not IPCServer.CreateServer('IPC Server') then
-    Form1.Memo1.Lines.Add('Error create server "' + 'IPC Server' + '" - ' + SysErrorMessage(IPCServer.LastError))
+  if not FIPCServer.CreateServer('IPC Server') then
+    Form1.Memo1.Lines.Add('Error create server "' + 'IPC Server' + '" - ' + SysErrorMessage(FIPCServer.LastError))
   else
   begin
     Button1.Enabled := False;
@@ -79,7 +74,7 @@ end;
 
 procedure TForm1.Button2Click(Sender: TObject);
 begin
-  if IPCServer.FreeServer then
+  if FIPCServer.FreeServer then
   begin
     Button1.Enabled := True;
     Button2.Enabled := False;
@@ -93,14 +88,15 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  IPCServer.Free;
+  FIPCServer.Free;
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  IPCServer := TIPCServer.Create(nil);
-  IPCServer.OnRecieveIpcData := ServerRecieveIpcData;
+  FIPCServer := TIPCServer.Create(nil);
+  FIPCServer.OnRecieveIpcData := ServerRecieveIpcData;
   Button1.Click;
 end;
 
 end.
+

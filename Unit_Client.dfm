@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 258
   Top = 128
-  Width = 577
-  Height = 273
   Caption = 'IPC Client'
+  ClientHeight = 234
+  ClientWidth = 561
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,8 +15,8 @@ object Form1: TForm1
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   DesignSize = (
-    569
-    245)
+    561
+    234)
   PixelsPerInch = 120
   TextHeight = 17
   object Button1: TButton

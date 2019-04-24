@@ -2,7 +2,8 @@ program Client;
 
 uses
   Forms,
-  Unit_Client in 'Unit_Client.pas' {Form1};
+  Unit_Client in 'Unit_Client.pas' {Form1},
+  IPC.Demo.Types in 'IPC.Demo.Types.pas';
 
 {$R *.res}
 

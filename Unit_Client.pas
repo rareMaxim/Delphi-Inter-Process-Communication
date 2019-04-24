@@ -3,13 +3,19 @@ unit Unit_Client;
 interface
 
 uses
-{$IF CompilerVersion < 18}
-  Windows, Messages, SysUtils, Variants, Classes, Graphics,
-  Controls, Forms, Dialogs, StdCtrls, ExtCtrls, ComCtrls, XPMan,
-{$ELSE}
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.XPMan,
-{$IFEND}IPC;
+  Winapi.Windows,
+  Winapi.Messages,
+  System.SysUtils,
+  System.Variants,
+  System.Classes,
+  Vcl.Graphics,
+  Vcl.Controls,
+  Vcl.Forms,
+  Vcl.Dialogs,
+  Vcl.StdCtrls,
+  Vcl.ExtCtrls,
+  Vcl.ComCtrls,
+  IPC;
 
 type
   TForm1 = class(TForm)
@@ -21,6 +27,7 @@ type
     procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
+    FIPCClient: TIPCClient;
   public
     { Public declarations }
     procedure ClientRecieveResponseIpcData(Sender: TObject; var ResponseData: Pointer);
@@ -28,28 +35,12 @@ type
 
 var
   Form1: TForm1;
-  IPCClient: TIPCClient;
 
 implementation
 
+uses
+  IPC.Demo.Types;
 {$R *.dfm}
-
-
-const
-  MAX_LENGTH = 1024;
-
-type
-  TData = packed record
-    ProcessId: DWORD;
-    Text: array [0 .. MAX_LENGTH] of WideChar;
-  end;
-
-type
-  TResponseData = packed record
-    Text: array [0 .. MAX_LENGTH] of WideChar;
-  end;
-
-  PResponseData = ^TResponseData;
 
 procedure TForm1.ClientRecieveResponseIpcData(Sender: TObject; var ResponseData: Pointer);
 begin
@@ -64,8 +55,8 @@ begin
   ResponseData := nil;
   Data.ProcessId := GetCurrentProcessId;
   lstrcpynW(Data.Text, PWideChar(Memo1.Text), MAX_LENGTH);
-  if not IPCClient.SendIpcData('IPC Server', @Data, SizeOf(TData), CheckBox1.Checked, 1000, ResponseData) then
-    Memo1.Lines.Add('Error send IPC data - ' + SysErrorMessage(IPCClient.LastError));
+  if not FIPCClient.SendIpcData('IPC Server', @Data, SizeOf(TData), CheckBox1.Checked, 1000, ResponseData) then
+    Memo1.Lines.Add('Error send IPC data - ' + SysErrorMessage(FIPCClient.LastError));
   if ResponseData <> nil then
   begin
     MessageBeep(0);
@@ -75,15 +66,16 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-  IPCClient := TIPCClient.Create(nil);
-  if not IPCClient.CreateClient('IPCClient_' + IntToStr(GetCurrentProcessId)) then
-    Memo1.Lines.Add('Error create client "' + 'IPC Client' + '" - ' + SysErrorMessage(IPCClient.LastError));
-  IPCClient.OnRecieveResponseIpcData := ClientRecieveResponseIpcData;
+  FIPCClient := TIPCClient.Create(nil);
+  if not FIPCClient.CreateClient('IPCClient_' + IntToStr(GetCurrentProcessId)) then
+    Memo1.Lines.Add('Error create client "' + 'IPC Client' + '" - ' + SysErrorMessage(FIPCClient.LastError));
+  FIPCClient.OnRecieveResponseIpcData := ClientRecieveResponseIpcData;
 end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
-  IPCClient.Free;
+  FIPCClient.Free;
 end;
 
 end.
+

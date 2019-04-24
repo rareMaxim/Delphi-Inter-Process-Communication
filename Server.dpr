@@ -2,7 +2,8 @@ program Server;
 
 uses
   Vcl.Forms,
-  Unit_Server in 'Unit_Server.pas' {Form1};
+  Unit_Server in 'Unit_Server.pas' {Form1},
+  IPC.Demo.Types in 'IPC.Demo.Types.pas';
 
 {$R *.res}
 

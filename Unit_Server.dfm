@@ -1,9 +1,9 @@
 object Form1: TForm1
   Left = 260
   Top = 127
-  Width = 893
-  Height = 382
   Caption = 'IPC Server'
+  ClientHeight = 343
+  ClientWidth = 877
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,8 +14,8 @@ object Form1: TForm1
   OnClose = FormClose
   OnCreate = FormCreate
   DesignSize = (
-    885
-    354)
+    877
+    343)
   PixelsPerInch = 120
   TextHeight = 17
   object Button1: TButton
@@ -52,7 +52,7 @@ object Form1: TForm1
     Left = 10
     Top = 275
     Width = 865
-    Height = 21
+    Height = 25
     Anchors = [akLeft, akRight, akBottom]
     TabOrder = 3
     Text = 'This is response text from server '
