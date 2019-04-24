@@ -44,8 +44,8 @@ type
     ThreadOwner: TIPCServer;
     procedure Execute; override;
     constructor Create(AThreadOwner: TIPCServer);
-    destructor Destroy; override;
   public
+    destructor Destroy; override;
   end;
 
   TIPCClient = class(TComponent)
