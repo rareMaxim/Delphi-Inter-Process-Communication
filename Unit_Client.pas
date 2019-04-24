@@ -54,8 +54,8 @@ var
 begin
   ResponseData := nil;
   Data.ProcessId := GetCurrentProcessId;
-  lstrcpynW(Data.Text, PWideChar(Memo1.Text), MAX_LENGTH);
-  if not FIPCClient.SendIpcData('IPC Server', @Data, SizeOf(TData), CheckBox1.Checked, 1000, ResponseData) then
+  Data.SetText(Memo1.Text);
+  if not FIPCClient.Send<TData>('IPC Server', Data, CheckBox1.Checked, 1000, ResponseData) then
     Memo1.Lines.Add('Error send IPC data - ' + SysErrorMessage(FIPCClient.LastError));
   if ResponseData <> nil then
   begin

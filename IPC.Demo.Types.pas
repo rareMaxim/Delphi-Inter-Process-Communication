@@ -12,6 +12,7 @@ type
   TData = packed record
     ProcessId: DWORD;
     Text: array[0..MAX_LENGTH] of WideChar;
+    procedure SetText(const AValue: string);
   end;
 
 type
@@ -23,6 +24,13 @@ type
   PResponseData = ^TResponseData;
 
 implementation
+
+{ TData }
+
+procedure TData.SetText(const AValue: string);
+begin
+  lstrcpynW(Text, PWideChar(AValue), MAX_LENGTH);
+end;
 
 end.
 

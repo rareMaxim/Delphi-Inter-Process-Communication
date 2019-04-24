@@ -60,10 +60,16 @@ type
     destructor Destroy; override;
     function CreateClient(ClientName: WideString): Boolean;
     function FreeClient: Boolean;
-    function SendIpcData(ServerName: WideString; Data: Pointer; DataSize: DWORD;
-      WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
+    function Send<T>(ServerName: WideString; Data: T; WaitForResponse: Boolean;
+      ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
     property OnRecieveResponseIpcData: TClientRecieveResponseIpcDataEvent read
       FOnRecieveIpcData write FOnRecieveIpcData;
+  end;
+
+type
+  TClientNameData = packed record
+    ClientName: array[0..255] of WideChar;
+    ClientWaitingForResponse: Boolean;
   end;
 
 implementation
@@ -215,12 +221,6 @@ begin
   except
   end;
 end;
-
-type
-  TClientNameData = packed record
-    ClientName: array[0..255] of WideChar;
-    ClientWaitingForResponse: Boolean;
-  end;
 
 function TIPCServer.ReadData(var ClientName: WideString; var
   ClientWaitingForResponse: Boolean; var Data: Pointer): Boolean;
@@ -538,8 +538,8 @@ begin
   end;
 end;
 
-function TIPCClient.SendIpcData(ServerName: WideString; Data: Pointer; DataSize:
-  DWORD; WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
+function TIPCClient.Send<T>(ServerName: WideString; Data: T; WaitForResponse:
+  Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
 var
   MemoryStream: TMemoryStream;
   i, NumberOfBytesWritten: DWORD;
@@ -551,7 +551,6 @@ var
 begin
   Result := False;
   try
-
     ServerHandle := CreateFileW(PWideChar('\\.\mailslot\' + ServerName),
       GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if ServerHandle = INVALID_HANDLE_VALUE then
@@ -566,7 +565,7 @@ begin
 
       MemoryStream := TMemoryStream.Create;
       try
-        MemoryStream.Write(Data^, DataSize);
+        MemoryStream.Write(Data, SizeOf(Data) {DataSize});
         MemoryStream.Write(ClientNameData, SizeOf(TClientNameData));
         MemoryStream.Position := 0;
 
