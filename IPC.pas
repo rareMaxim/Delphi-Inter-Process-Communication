@@ -3,22 +3,21 @@ unit IPC;
 interface
 
 uses
-{$IF CompilerVersion < 18}
-  Windows, Classes;
-{$ELSE}
-  Winapi.Windows, System.Classes;
-{$IFEND}
-
+  Winapi.Windows,
+  System.Classes;
 
 type
-  TServerRecieveIpcDataEvent = procedure(Sender: TObject; var ClientName: WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer) of object;
+  TServerRecieveIpcDataEvent = procedure(Sender: TObject; var ClientName:
+    WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer) of object;
 
 type
   TClientRecieveResponseIpcDataEvent = procedure(Sender: TObject; var Data: Pointer) of object;
 
 type
   TIPCServer = class;
+
   TIPCClient = class;
+
   TServerThread = class;
 
   TIPCServer = class(TComponent)
@@ -61,21 +60,20 @@ type
     destructor Destroy; override;
     function CreateClient(ClientName: WideString): Boolean;
     function FreeClient: Boolean;
-    function SendIpcData(ServerName: WideString; Data: Pointer; DataSize: DWORD; WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
-    property OnRecieveResponseIpcData: TClientRecieveResponseIpcDataEvent read FOnRecieveIpcData write FOnRecieveIpcData;
+    function SendIpcData(ServerName: WideString; Data: Pointer; DataSize: DWORD;
+      WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
+    property OnRecieveResponseIpcData: TClientRecieveResponseIpcDataEvent read
+      FOnRecieveIpcData write FOnRecieveIpcData;
   end;
 
 implementation
 
-
 type
-  TConvertStringSecurityDescriptorToSecurityDescriptorW = function(StringSecurityDescriptor: LPCWSTR;
-    StringSDRevision: DWORD; var SecurityDescriptor: Pointer;
-    SecurityDescriptorSize: PULONG): BOOL; stdcall;
+  TConvertStringSecurityDescriptorToSecurityDescriptorW = function(StringSecurityDescriptor:
+    LPCWSTR; StringSDRevision: DWORD; var SecurityDescriptor: Pointer; SecurityDescriptorSize: PULONG): BOOL; stdcall;
 
 var
   OSVersion: DWORD;
-
   ConvertStringSecurityDescriptorToSecurityDescriptorW: TConvertStringSecurityDescriptorToSecurityDescriptorW;
 
 function GetOSVersion: DWORD;
@@ -103,7 +101,14 @@ begin
       else if OSVersionInfo.DwMinorVersion = 1 then
         Result := 61 // Windows 7
       else if OSVersionInfo.DwMinorVersion = 2 then
-        Result := 62; // Windows 8
+        Result := 62 // Windows 8
+      else if OSVersionInfo.DwMinorVersion = 2 then
+        Result := 63; // Windows 8.1  ?
+    end
+    else if OSVersionInfo.DwMajorVersion = 10 then
+    begin
+      if OSVersionInfo.DwMinorVersion = 0 then
+        Result := 100; // Windows 10
     end;
   end;
 end;
@@ -121,8 +126,8 @@ begin
 end;
 
 const
-  LOW_INTEGRITY_SDDL_SACL = 'D:' + '(A;OICI;GRGW;;;AU)' + '(A;OICI;GRGW;;;BA)' + '(A;OICI;GRGW;;;AN)' + '(A;OICI;GRGW;;;BG)' + 'S:(ML;;NW;;;LW)';
-
+  LOW_INTEGRITY_SDDL_SACL = 'D:' + '(A;OICI;GRGW;;;AU)' + '(A;OICI;GRGW;;;BA)' +
+    '(A;OICI;GRGW;;;AN)' + '(A;OICI;GRGW;;;BG)' + 'S:(ML;;NW;;;LW)';
   SDDL_REVISION_1 = 1;
 
 function TIPCServer.CreateServer(ServerName: WideString): Boolean;
@@ -144,7 +149,8 @@ begin
     begin
       FillChar(SecurityDescriptor_V, SizeOf(PSECURITY_DESCRIPTOR), 0);
 
-      if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL, SDDL_REVISION_1, SecurityDescriptor_V, nil) then
+      if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL,
+        SDDL_REVISION_1, SecurityDescriptor_V, nil) then
       begin
         LastError := GetLastError;
         Exit;
@@ -212,11 +218,12 @@ end;
 
 type
   TClientNameData = packed record
-    ClientName: array [0 .. 255] of WideChar;
+    ClientName: array[0..255] of WideChar;
     ClientWaitingForResponse: Boolean;
   end;
 
-function TIPCServer.ReadData(var ClientName: WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer): Boolean;
+function TIPCServer.ReadData(var ClientName: WideString; var
+  ClientWaitingForResponse: Boolean; var Data: Pointer): Boolean;
 var
   BufferSize, NumberOfBytesWritten: DWORD;
   MemoryStream: TMemoryStream;
@@ -287,7 +294,8 @@ var
 begin
   Result := False;
   try
-    ServerHandle := CreateFileW(PWideChar('\\.\mailslot\' + ClientName), GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    ServerHandle := CreateFileW(PWideChar('\\.\mailslot\' + ClientName),
+      GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if ServerHandle = INVALID_HANDLE_VALUE then
     begin
       LastError := GetLastError;
@@ -352,7 +360,7 @@ begin
   while not Terminated do
   begin
     Sleep(10);
-    Synchronize(DoReadData);
+    SYNCHRONIZE(DoReadData);
   end;
 
   ThreadOwner.FServerThreadEnabled := False;
@@ -421,7 +429,8 @@ begin
     begin
       FillChar(SecurityDescriptor_V, SizeOf(PSECURITY_DESCRIPTOR), 0);
 
-      if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL, SDDL_REVISION_1, SecurityDescriptor_V, nil) then
+      if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL,
+        SDDL_REVISION_1, SecurityDescriptor_V, nil) then
       begin
         LastError := GetLastError;
         Exit;
@@ -529,7 +538,8 @@ begin
   end;
 end;
 
-function TIPCClient.SendIpcData(ServerName: WideString; Data: Pointer; DataSize: DWORD; WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
+function TIPCClient.SendIpcData(ServerName: WideString; Data: Pointer; DataSize:
+  DWORD; WaitForResponse: Boolean; ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
 var
   MemoryStream: TMemoryStream;
   i, NumberOfBytesWritten: DWORD;
@@ -542,7 +552,8 @@ begin
   Result := False;
   try
 
-    ServerHandle := CreateFileW(PWideChar('\\.\mailslot\' + ServerName), GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    ServerHandle := CreateFileW(PWideChar('\\.\mailslot\' + ServerName),
+      GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if ServerHandle = INVALID_HANDLE_VALUE then
     begin
       LastError := GetLastError;
@@ -630,7 +641,8 @@ begin
     begin
       if OSVersion >= 60 then
       begin
-        @ConvertStringSecurityDescriptorToSecurityDescriptorW := GetProcAddress(hLibrary, 'ConvertStringSecurityDescriptorToSecurityDescriptorW');
+        @ConvertStringSecurityDescriptorToSecurityDescriptorW := GetProcAddress(hLibrary,
+          'ConvertStringSecurityDescriptorToSecurityDescriptorW');
       end;
       hLibrary := 0;
     end;
@@ -640,7 +652,7 @@ begin
 end;
 
 initialization
-
-_Initialize;
+  _Initialize;
 
 end.
+
