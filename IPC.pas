@@ -10,10 +10,8 @@ type
   TServerRecieveIpcDataEvent = procedure(Sender: TObject; var ClientName:
     WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer) of object;
 
-type
   TClientRecieveResponseIpcDataEvent = procedure(Sender: TObject; var Data: Pointer) of object;
 
-type
   TIPCServer = class;
 
   TIPCClient = class;
@@ -26,7 +24,8 @@ type
     FServerThread: TServerThread;
     FOnRecieveIpcData: TServerRecieveIpcDataEvent;
     FServerThreadEnabled: Boolean;
-    function ReadData(var ClientName: WideString; var ClientWaitingForResponse: Boolean; var Data: Pointer): Boolean;
+    function ReadData(var ClientName: WideString; var ClientWaitingForResponse:
+      Boolean; var Data: Pointer): Boolean;
   public
     LastError: Integer;
     constructor Create(AOwner: TComponent); override;
@@ -34,7 +33,8 @@ type
     function CreateServer(ServerName: WideString): Boolean;
     function FreeServer: Boolean;
     function SendIpcData(ClientName: WideString; Data: Pointer; DataSize: DWORD): Boolean;
-    property OnRecieveIpcData: TServerRecieveIpcDataEvent read FOnRecieveIpcData write FOnRecieveIpcData;
+    property OnRecieveIpcData: TServerRecieveIpcDataEvent read FOnRecieveIpcData
+      write FOnRecieveIpcData;
   end;
 
   TServerThread = class(TThread)
@@ -53,7 +53,8 @@ type
     FClientName: WideString;
     FResponseServerHandle: THandle;
     FOnRecieveIpcData: TClientRecieveResponseIpcDataEvent;
-    function ReadData(ServerHandle: THandle; var ClientName: WideString; var Data: Pointer): Boolean;
+    function ReadData(ServerHandle: THandle; var ClientName: WideString; var
+      Data: Pointer): Boolean;
   public
     LastError: Integer;
     constructor Create(AOwner: TComponent); override;
@@ -76,11 +77,13 @@ implementation
 
 type
   TConvertStringSecurityDescriptorToSecurityDescriptorW = function(StringSecurityDescriptor:
-    LPCWSTR; StringSDRevision: DWORD; var SecurityDescriptor: Pointer; SecurityDescriptorSize: PULONG): BOOL; stdcall;
+    LPCWSTR; StringSDRevision: DWORD; var SecurityDescriptor: Pointer;
+    SecurityDescriptorSize: PULONG): BOOL; stdcall;
 
 var
   OSVersion: DWORD;
-  ConvertStringSecurityDescriptorToSecurityDescriptorW: TConvertStringSecurityDescriptorToSecurityDescriptorW;
+  ConvertStringSecurityDescriptorToSecurityDescriptorW:
+    TConvertStringSecurityDescriptorToSecurityDescriptorW;
 
 function GetOSVersion: DWORD;
 var
@@ -181,7 +184,8 @@ begin
       end;
     end;
 
-    FServerHandle := CreateMailslotW(PWideChar('\\.\mailslot\' + ServerName), 0, 0, @SecurityAttributes);
+    FServerHandle := CreateMailslotW(PWideChar('\\.\mailslot\' + ServerName), 0,
+      0, @SecurityAttributes);
 
     if FServerHandle = INVALID_HANDLE_VALUE then
     begin
@@ -243,7 +247,8 @@ begin
         try
           if (DataBuffer <> nil) and (ClientDataBuffer <> nil) and (Data <> nil) then
           begin
-            ReadStatus := ReadFile(FServerHandle, DataBuffer^, BufferSize, NumberOfBytesWritten, nil);
+            ReadStatus := ReadFile(FServerHandle, DataBuffer^, BufferSize,
+              NumberOfBytesWritten, nil);
             if ReadStatus then
             begin
               MemoryStream := TMemoryStream.Create;
@@ -435,7 +440,8 @@ begin
       end;
     end;
 
-    FResponseServerHandle := CreateMailslotW(PWideChar('\\.\mailslot\' + ClientName), 0, 0, @SecurityAttributes);
+    FResponseServerHandle := CreateMailslotW(PWideChar('\\.\mailslot\' +
+      ClientName), 0, 0, @SecurityAttributes);
 
     if FResponseServerHandle = INVALID_HANDLE_VALUE then
     begin
@@ -465,7 +471,8 @@ begin
   end;
 end;
 
-function TIPCClient.ReadData(ServerHandle: THandle; var ClientName: WideString; var Data: Pointer): Boolean;
+function TIPCClient.ReadData(ServerHandle: THandle; var ClientName: WideString;
+  var Data: Pointer): Boolean;
 var
   BufferSize, NumberOfBytesWritten: DWORD;
   MemoryStream: TMemoryStream;
