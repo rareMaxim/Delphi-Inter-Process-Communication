@@ -4,6 +4,7 @@ interface
 
 uses
   Winapi.Windows,
+  System.SysUtils,
   System.Classes;
 
 type
@@ -24,24 +25,27 @@ type
     FServerThread: TServerThread;
     FOnRecieveIpcData: TServerRecieveIpcDataEvent;
     FServerThreadEnabled: Boolean;
+    FLastError: Integer;
+  protected
     function ReadData(var ClientName: WideString; var ClientWaitingForResponse:
       Boolean; var Data: Pointer): Boolean;
   public
-    LastError: Integer;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function CreateServer(ServerName: WideString): Boolean;
     function FreeServer: Boolean;
     function SendIpcData(ClientName: WideString; Data: Pointer; DataSize: DWORD): Boolean;
+  public
     property OnRecieveIpcData: TServerRecieveIpcDataEvent read FOnRecieveIpcData
       write FOnRecieveIpcData;
+    property LastError: Integer read FLastError;
   end;
 
   TServerThread = class(TThread)
   private
-    procedure DoReadData;
+    FThreadOwner: TIPCServer;
   protected
-    ThreadOwner: TIPCServer;
+    procedure DoReadData;
     procedure Execute; override;
   public
     constructor Create(AThreadOwner: TIPCServer);
@@ -53,18 +57,21 @@ type
     FClientName: WideString;
     FResponseServerHandle: THandle;
     FOnRecieveIpcData: TClientRecieveResponseIpcDataEvent;
+    FLastError: Integer;
+  protected
     function ReadData(ServerHandle: THandle; var ClientName: WideString; var
       Data: Pointer): Boolean;
   public
-    LastError: Integer;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function CreateClient(ClientName: WideString): Boolean;
     function FreeClient: Boolean;
     function Send<T>(ServerName: WideString; Data: T; WaitForResponse: Boolean;
       ResponseTimeout: ULONG; var ResponseData: Pointer): Boolean;
+  public
     property OnRecieveResponseIpcData: TClientRecieveResponseIpcDataEvent read
       FOnRecieveIpcData write FOnRecieveIpcData;
+    property LastError: Integer read FLastError;
   end;
 
 type
@@ -86,40 +93,8 @@ var
     TConvertStringSecurityDescriptorToSecurityDescriptorW;
 
 function GetOSVersion: DWORD;
-var
-  OSVersionInfo: TOSVersionInfo;
 begin
-  Result := 0;
-  FillChar(OSVersionInfo, SizeOf(OSVersionInfo), 0);
-  OSVersionInfo.DwOSVersionInfoSize := SizeOf(OSVersionInfo);
-  if GetVersionEx(OSVersionInfo) then
-  begin
-    if OSVersionInfo.DwMajorVersion = 5 then
-    begin
-      if OSVersionInfo.DwMinorVersion = 0 then
-        Result := 50 // Windows 2000
-      else if OSVersionInfo.DwMinorVersion = 2 then
-        Result := 52 // Windows 2003
-      else if OSVersionInfo.DwMinorVersion = 1 then
-        Result := 51 // Windows XP
-    end
-    else if OSVersionInfo.DwMajorVersion = 6 then
-    begin
-      if OSVersionInfo.DwMinorVersion = 0 then
-        Result := 60 // Windows Vista
-      else if OSVersionInfo.DwMinorVersion = 1 then
-        Result := 61 // Windows 7
-      else if OSVersionInfo.DwMinorVersion = 2 then
-        Result := 62 // Windows 8
-      else if OSVersionInfo.DwMinorVersion = 2 then
-        Result := 63; // Windows 8.1  ?
-    end
-    else if OSVersionInfo.DwMajorVersion = 10 then
-    begin
-      if OSVersionInfo.DwMinorVersion = 0 then
-        Result := 100; // Windows 10
-    end;
-  end;
+  Result := (TOSVersion.Major.ToString + TOSVersion.Minor.ToString).ToInteger;
 end;
 
 constructor TIPCServer.Create(AOwner: TComponent);
@@ -150,7 +125,7 @@ begin
   try
     if GetMailslotInfo(FServerHandle, nil, BufferSize, nil, nil) then
     begin
-      LastError := ERROR_ALREADY_EXISTS;
+      FLastError := ERROR_ALREADY_EXISTS;
       Exit;
     end;
 
@@ -161,7 +136,7 @@ begin
       if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL,
         SDDL_REVISION_1, SecurityDescriptor_V, nil) then
       begin
-        LastError := GetLastError;
+        FLastError := GetLastError;
         Exit;
       end;
 
@@ -189,7 +164,7 @@ begin
 
     if FServerHandle = INVALID_HANDLE_VALUE then
     begin
-      LastError := GetLastError;
+      FLastError := GetLastError;
       Exit;
     end;
 
@@ -200,7 +175,7 @@ begin
     end;
 
     Result := True;
-    LastError := ERROR_SUCCESS;
+    FLastError := ERROR_SUCCESS;
   except
   end;
 end;
@@ -220,7 +195,7 @@ begin
       FServerHandle := 0;
     end;
 
-    LastError := ERROR_SUCCESS;
+    FLastError := ERROR_SUCCESS;
     Result := True;
   except
   end;
@@ -292,7 +267,7 @@ begin
       GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if ServerHandle = INVALID_HANDLE_VALUE then
     begin
-      LastError := GetLastError;
+      FLastError := GetLastError;
       Exit;
     end;
     try
@@ -307,11 +282,11 @@ begin
           MemoryStream.Read(Buffer^, MemoryStream.Size);
           if WriteFile(ServerHandle, Buffer^, MemoryStream.Size, NumberOfBytesWritten, nil) then
           begin
-            LastError := ERROR_SUCCESS;
+            FLastError := ERROR_SUCCESS;
             Result := True;
           end
           else
-            LastError := GetLastError;
+            FLastError := GetLastError;
         finally
           FreeMem(Buffer);
         end;
@@ -333,12 +308,12 @@ var
 begin
   try
     Data := nil;
-    if ThreadOwner.ReadData(ClientName, ClientWaitResponse, Data) then
+    if FThreadOwner.ReadData(ClientName, ClientWaitResponse, Data) then
     begin
       if Data <> nil then
       begin
-        if Assigned(ThreadOwner.FOnRecieveIpcData) then
-          ThreadOwner.FOnRecieveIpcData(Self, ClientName, ClientWaitResponse, Data);
+        if Assigned(FThreadOwner.FOnRecieveIpcData) then
+          FThreadOwner.FOnRecieveIpcData(Self, ClientName, ClientWaitResponse, Data);
       end;
     end;
   except
@@ -352,13 +327,13 @@ begin
     Sleep(10);
     SYNCHRONIZE(DoReadData);
   end;
-  ThreadOwner.FServerThreadEnabled := False;
+  FThreadOwner.FServerThreadEnabled := False;
 end;
 
 constructor TServerThread.Create(AThreadOwner: TIPCServer);
 begin
   inherited Create(False);
-  ThreadOwner := AThreadOwner;
+  FThreadOwner := AThreadOwner;
   FreeOnTerminate := True;
   case GetThreadPriority(GetCurrentThread) of
     THREAD_PRIORITY_ABOVE_NORMAL:
@@ -407,7 +382,7 @@ begin
   try
     if GetMailslotInfo(FResponseServerHandle, nil, BufferSize, nil, nil) then
     begin
-      LastError := ERROR_ALREADY_EXISTS;
+      FLastError := ERROR_ALREADY_EXISTS;
       Exit;
     end;
 
@@ -418,7 +393,7 @@ begin
       if not ConvertStringSecurityDescriptorToSecurityDescriptorW(LOW_INTEGRITY_SDDL_SACL,
         SDDL_REVISION_1, SecurityDescriptor_V, nil) then
       begin
-        LastError := GetLastError;
+        FLastError := GetLastError;
         Exit;
       end;
 
@@ -445,13 +420,13 @@ begin
 
     if FResponseServerHandle = INVALID_HANDLE_VALUE then
     begin
-      LastError := GetLastError;
+      FLastError := GetLastError;
       Exit;
     end;
 
     Result := True;
     FClientName := ClientName;
-    LastError := ERROR_SUCCESS;
+    FLastError := ERROR_SUCCESS;
   except
   end;
 end;
@@ -465,7 +440,7 @@ begin
       CloseHandle(FResponseServerHandle);
       FResponseServerHandle := 0;
     end;
-    LastError := ERROR_SUCCESS;
+    FLastError := ERROR_SUCCESS;
     Result := True;
   except
   end;
@@ -543,7 +518,7 @@ begin
       GENERIC_WRITE, FILE_SHARE_READ, nil, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     if ServerHandle = INVALID_HANDLE_VALUE then
     begin
-      LastError := GetLastError;
+      FLastError := GetLastError;
       Exit;
     end;
 
@@ -562,7 +537,7 @@ begin
           MemoryStream.Read(Buffer^, MemoryStream.Size);
           if not WriteFile(ServerHandle, Buffer^, MemoryStream.Size, NumberOfBytesWritten, nil) then
           begin
-            LastError := GetLastError;
+            FLastError := GetLastError;
             Exit;
           end;
         finally
@@ -575,7 +550,7 @@ begin
       CloseHandle(ServerHandle);
     end;
 
-    LastError := ERROR_SUCCESS;
+    FLastError := ERROR_SUCCESS;
     Result := True;
 
     if (WaitForResponse = True) and (ResponseTimeout > 0) then
