@@ -43,8 +43,8 @@ type
   protected
     ThreadOwner: TIPCServer;
     procedure Execute; override;
-    constructor Create(AThreadOwner: TIPCServer);
   public
+    constructor Create(AThreadOwner: TIPCServer);
     destructor Destroy; override;
   end;
 
@@ -240,36 +240,25 @@ begin
         GetMem(DataBuffer, BufferSize);
         GetMem(ClientDataBuffer, BufferSize);
         GetMem(Data, BufferSize);
-
         try
           if (DataBuffer <> nil) and (ClientDataBuffer <> nil) and (Data <> nil) then
           begin
-            ReadStatus := False;
-
             ReadStatus := ReadFile(FServerHandle, DataBuffer^, BufferSize, NumberOfBytesWritten, nil);
-
             if ReadStatus then
             begin
               MemoryStream := TMemoryStream.Create;
               try
                 MemoryStream.Write(DataBuffer^, BufferSize);
-
                 MemoryStream.Position := 0;
-
                 MemoryStream.Read(ClientDataBuffer^, BufferSize - SizeOf(TClientNameData));
-
                 CopyMemory(Data, ClientDataBuffer, BufferSize - SizeOf(TClientNameData));
-
                 MemoryStream.Position := BufferSize - SizeOf(TClientNameData);
-
                 MemoryStream.Read(ClientNameData, SizeOf(TClientNameData));
-
                 ClientName := WideString(ClientNameData.ClientName);
                 ClientWaitingForResponse := ClientNameData.ClientWaitingForResponse;
               finally
                 MemoryStream.Free;
               end;
-
               Result := True;
             end;
           end;
@@ -287,7 +276,7 @@ end;
 function TIPCServer.SendIpcData(ClientName: WideString; Data: Pointer; DataSize: DWORD): Boolean;
 var
   MemoryStream: TMemoryStream;
-  i, NumberOfBytesWritten: DWORD;
+  NumberOfBytesWritten: DWORD;
   ClientData: TClientNameData;
   Buffer: Pointer;
   ServerHandle: THandle;
@@ -308,12 +297,9 @@ begin
         MemoryStream.Write(Data^, DataSize);
         MemoryStream.Write(ClientData, SizeOf(TClientNameData));
         MemoryStream.Position := 0;
-
         GetMem(Buffer, MemoryStream.Size);
         try
-
           MemoryStream.Read(Buffer^, MemoryStream.Size);
-
           if WriteFile(ServerHandle, Buffer^, MemoryStream.Size, NumberOfBytesWritten, nil) then
           begin
             LastError := ERROR_SUCCESS;
@@ -321,7 +307,6 @@ begin
           end
           else
             LastError := GetLastError;
-
         finally
           FreeMem(Buffer);
         end;
@@ -362,16 +347,14 @@ begin
     Sleep(10);
     SYNCHRONIZE(DoReadData);
   end;
-
   ThreadOwner.FServerThreadEnabled := False;
 end;
 
 constructor TServerThread.Create(AThreadOwner: TIPCServer);
 begin
-  inherited Create(True);
+  inherited Create(False);
   ThreadOwner := AThreadOwner;
   FreeOnTerminate := True;
-
   case GetThreadPriority(GetCurrentThread) of
     THREAD_PRIORITY_ABOVE_NORMAL:
       Priority := tpHigher;
@@ -388,8 +371,6 @@ begin
     THREAD_PRIORITY_TIME_CRITICAL:
       Priority := tpTimeCritical;
   end;
-
-  Resume;
 end;
 
 destructor TServerThread.Destroy;
@@ -626,27 +607,16 @@ begin
   end;
 end;
 
-function _Initialize: LongBool;
+procedure _Initialize;
 var
   hLibrary: HMODULE;
-  ntdllLibrary: HMODULE;
-  SBI: SYSTEM_INFO;
 begin
-  try
-    OSVersion := GetOSVersion;
-
-    hLibrary := LoadLibrary('advapi32.dll');
-    if hLibrary <> 0 then
-    begin
-      if OSVersion >= 60 then
-      begin
-        @ConvertStringSecurityDescriptorToSecurityDescriptorW := GetProcAddress(hLibrary,
-          'ConvertStringSecurityDescriptorToSecurityDescriptorW');
-      end;
-      hLibrary := 0;
-    end;
-
-  except
+  OSVersion := GetOSVersion;
+  hLibrary := LoadLibrary('advapi32.dll');
+  if (hLibrary <> 0) and (OSVersion >= 60) then
+  begin
+    @ConvertStringSecurityDescriptorToSecurityDescriptorW := GetProcAddress(hLibrary,
+      'ConvertStringSecurityDescriptorToSecurityDescriptorW');
   end;
 end;
 
